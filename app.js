@@ -566,17 +566,15 @@
     ctx.fillText('前世今生 · 中国历史身份抽签', W / 2, H - 80);
     ctx.fillText('扫一扫，抽你的前世身份', W / 2, H - 50);
 
-    // Download
+    // Generate image: show as <img> for long-press save (mobile-friendly)
     canvas.toBlob(function (blob) {
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `前世今生_${r.dynasty.name}_${r.specialTitle || r.occupation.name}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('图片已保存！');
+      const img = document.getElementById('shareImagePreview');
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+      document.getElementById('shareImageOverlay').classList.add('active');
     }, 'image/png');
   };
 
@@ -639,8 +637,21 @@
   // ---- History ----
   window.toggleHistory = function () {
     const drawer = document.getElementById('historyDrawer');
-    drawer.classList.toggle('open');
+    const backdrop = document.getElementById('historyBackdrop');
+    const isOpen = drawer.classList.contains('open');
+    if (isOpen) {
+      drawer.classList.remove('open');
+      backdrop.classList.remove('open');
+    } else {
+      drawer.classList.add('open');
+      backdrop.classList.add('open');
+    }
   };
+
+  function closeHistory() {
+    document.getElementById('historyDrawer').classList.remove('open');
+    document.getElementById('historyBackdrop').classList.remove('open');
+  }
 
   function renderHistory() {
     const list = document.getElementById('historyList');
@@ -664,9 +675,13 @@
     const item = drawHistory.find(h => h.id === id);
     if (item && item.result) {
       currentResult = item.result;
-      document.getElementById('historyDrawer').classList.remove('open');
+      closeHistory();
       showResult(currentResult);
     }
+  };
+
+  window.closeShareImage = function () {
+    document.getElementById('shareImageOverlay').classList.remove('active');
   };
 
   // ---- Toast ----
