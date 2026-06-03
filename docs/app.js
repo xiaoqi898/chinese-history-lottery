@@ -119,16 +119,22 @@
     const occupation = OCCUPATIONS[selectedOcc.key];
     const occupationKey = selectedOcc.key;
 
-    // 6. Get rarity
+    // 6. Apply dynasty-specific name and tags (alias system)
+    const dynastyAliases = DYNASTY_OCCUPATION_ALIASES[dynasty.id] || {};
+    const alias = dynastyAliases[occupationKey];
+    const displayName = alias ? alias.name : occupation.name;
+    const displayTags = alias ? alias.tags : occupation.tags;
+
+    // 7. Get rarity
     const rarity = occupation.rarity;
     const rarityConfig = RARITY_CONFIG[rarity];
 
-    // 7. Special occupation title (optional)
+    // 8. Special occupation title (optional)
     const specialOccs = DYNASTY_SPECIAL_OCCUPATIONS[dynasty.id] || [];
     const hasSpecialTitle = rarity !== 'common' && Math.random() < 0.3 && specialOccs.length > 0;
     const specialTitle = hasSpecialTitle ? specialOccs[Math.floor(Math.random() * specialOccs.length)] : null;
 
-    // 8. Construct result
+    // 9. Construct result
     const result = {
       dynasty: dynasty,
       subPeriod: subPeriod,
@@ -137,6 +143,8 @@
       gender: gender,
       occupation: occupation,
       occupationKey: occupationKey,
+      displayName: displayName,
+      displayTags: displayTags,
       rarity: rarity,
       rarityConfig: rarityConfig,
       specialTitle: specialTitle,
@@ -209,7 +217,7 @@
         <div style="text-align:center;">
           <div style="font-size:1rem;margin-bottom:0.5rem;color:${rc.color};">${rc.name}</div>
           <div style="font-family:var(--font-serif);font-size:2rem;font-weight:900;margin-bottom:0.5rem;color:${rc.color};">
-            ${r.specialTitle || r.occupation.name}
+            ${r.specialTitle || r.displayName}
           </div>
           <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
             ${r.dynasty.name} · ${r.subPeriod.name}
@@ -269,7 +277,7 @@
     drawHistory.unshift({
       id: r.id,
       dynasty: r.dynasty.name,
-      occupation: r.specialTitle || r.occupation.name,
+      occupation: r.specialTitle || r.displayName,
       region: r.region.name,
       rarity: r.rarity,
       timestamp: r.timestamp,
@@ -286,7 +294,7 @@
         <div class="result-header" style="background: linear-gradient(180deg, ${rc.color}15, transparent);">
           <div class="dynasty-banner">${r.dynasty.description}</div>
           <div class="occupation-name" style="color: ${rc.color};">
-            ${r.specialTitle || r.occupation.name}
+            ${r.specialTitle || r.displayName}
           </div>
           <div class="rarity-badge ${r.rarity}">${rc.name} · ${rc.chance}</div>
           <div class="result-stars" style="color: ${rc.color};">
@@ -315,7 +323,7 @@
           <div class="detail-item">
             <div class="detail-icon">📋</div>
             <div class="detail-label">身份</div>
-            <div class="detail-value">${r.occupation.name}</div>
+            <div class="detail-value">${r.displayName}</div>
           </div>
         </div>
 
@@ -330,7 +338,7 @@
         </div>
 
         <div class="result-tags">
-          ${r.occupation.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+          ${r.displayTags.map(t => `<span class="tag">${t}</span>`).join('')}
           ${r.specialTitle ? `<span class="tag" style="border-color:${rc.color}40;color:${rc.color};">${r.specialTitle}</span>` : ''}
           <span class="tag">${r.region.modern}</span>
         </div>
@@ -355,7 +363,7 @@
       const prompt = AI_PROMPT_TEMPLATE
         .replace('{dynasty}', result.dynasty.name)
         .replace('{subPeriod}', result.subPeriod.name + '（' + result.subPeriod.range + '）')
-        .replace('{occupation}', result.specialTitle || result.occupation.name)
+        .replace('{occupation}', result.specialTitle || result.displayName)
         .replace('{gender}', result.gender.name)
         .replace('{region}', result.region.name)
         .replace('{modernRegion}', result.region.modern)
@@ -431,7 +439,7 @@
       '{subPeriod}': r.subPeriod.name,
       '{region}': r.region.name,
       '{season}': season,
-      '{occupation}': r.specialTitle || r.occupation.name,
+      '{occupation}': r.specialTitle || r.displayName,
     };
 
     for (const [key, val] of Object.entries(replacements)) {
@@ -451,7 +459,7 @@
     preview.innerHTML = `
       <div class="share-title">前世今生 · 中国历史身份抽签</div>
       <div class="share-identity" style="color:${rc.color};">
-        ${r.specialTitle || r.occupation.name}
+        ${r.specialTitle || r.displayName}
       </div>
       <div class="share-desc">
         ${r.dynasty.description} · ${r.gender.name}性 · ${r.region.name}人<br>
@@ -513,7 +521,7 @@
     // Main identity
     ctx.fillStyle = rc.color;
     ctx.font = '900 72px "Noto Serif SC", serif';
-    ctx.fillText(r.specialTitle || r.occupation.name, W / 2, 420);
+    ctx.fillText(r.specialTitle || r.displayName, W / 2, 420);
 
     // Stars
     ctx.font = '32px sans-serif';
@@ -534,7 +542,7 @@
       ['🏯 朝代', `${r.dynasty.name} · ${r.subPeriod.name}`],
       [`${r.gender.id === 'male' ? '♂' : '♀'} 性别`, r.gender.name + '性'],
       [`${r.region.icon} 籍贯`, `${r.region.name}（${r.region.modern}）`],
-      ['📋 身份', r.occupation.name],
+      ['📋 身份', r.displayName],
     ];
 
     details.forEach((d, i) => {
@@ -583,7 +591,7 @@
     const r = currentResult;
     const rc = r.rarityConfig;
     const text = `【前世今生 · 中国历史身份抽签】\n` +
-      `我抽到了：${r.specialTitle || r.occupation.name}\n` +
+      `我抽到了：${r.specialTitle || r.displayName}\n` +
       `${'★'.repeat(rc.stars)}${'☆'.repeat(5 - rc.stars)} ${rc.name}\n` +
       `${r.dynasty.description} · ${r.gender.name}性 · ${r.region.name}人\n` +
       `你也来试试吧！`;
